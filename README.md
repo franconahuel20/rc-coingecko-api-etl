@@ -26,7 +26,7 @@ A **production-ready, end-to-end weather data engineering pipeline** that automa
 | Database | PostgreSQL 14+ | Data warehouse |
 | Visualization | Apache Superset 3.x | BI dashboards |
 | Containerization | Docker & Compose | Environment consistency |
-| API | Open-Meteo API | Weather data source |
+| API | CoinGecko API | Crypyo prices data source |
 | Language | Python 3.8+ | ELT scripts |
 
 ---
@@ -112,7 +112,7 @@ cd rc-coingecko-api-etl
 #### 1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/franconahuel20/rc-coingecko-api-etl.git
-cd weather-data-project
+rc-coingecko-api-etl
 ```
 
 #### 2️⃣ Start All Services
