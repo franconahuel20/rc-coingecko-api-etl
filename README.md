@@ -8,7 +8,7 @@ A **production-ready, end-to-end weather data engineering pipeline** that automa
 
 **Data Flow**:
 
-1. **Extract**: Fetch real-time crypto prices data from [Open-Meteo API](https://api.coingecko.com)  
+1. **Extract**: Fetch real-time crypto prices data from [CoinGecko API](https://api.coingecko.com)  
 2. **Transform**: Clean & standardize using Pandas  
 3. **Load**: Persist to PostgreSQL database  
 4. **Model**: DBT transformations (staging → marts)  
@@ -244,7 +244,6 @@ docker exec -it dbt_container dbt test --project-dir /dbt/my_project
 - **Null checks**: Required fields completeness
 - **Uniqueness**: Primary key integrity
 - **Referential integrity**: Foreign key relationships
-- **Range validation**: Temperature/humidity bounds
 
 ---
 
