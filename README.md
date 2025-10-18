@@ -96,7 +96,7 @@ Previously, working on Windows caused issues with Git and Docker due to inconsis
 
 #### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/noran-salm/weather-data-project.git
+git clone https://github.com/franconahuel20/rc-coingecko-api-etl.git
 cd rc-coingecko-api-etl
 
 ## 🚀 Getting Started
@@ -106,14 +106,6 @@ cd rc-coingecko-api-etl
 - Docker Compose (v2.0+)
 - 8GB RAM minimum
 - Ports available: 8080 (Airflow), 8088 (Superset), 5432 (PostgreSQL)
-
-### Installation
-
-#### 1️⃣ Clone the Repository
-```bash
-git clone https://github.com/franconahuel20/rc-coingecko-api-etl.git
-rc-coingecko-api-etl
-```
 
 #### 2️⃣ Start All Services
 ```bash
