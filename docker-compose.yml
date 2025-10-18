@@ -1,0 +1,157 @@
+x-superset-user: &superset-user root
+x-superset-volumes: &superset-volumes
+  - ./docker:/app/docker
+  - ./docker/superset_config.py:/app/pythonpath/superset_config.py
+
+services:
+  db:
+    container_name: postgres_container
+    image: postgres:13
+    ports:
+      - "5000:5432"
+    environment:
+      POSTGRES_DB: db
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/airflow_init.sql:/docker-entrypoint-initdb.d/airflow_init.sql
+      - ./postgres/superset_init.sql:/docker-entrypoint-initdb.d/superset_init.sql
+      - ./postgres/coins_init.sql:/docker-entrypoint-initdb.d/coins_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_user -d db"]
+      interval: 5s
+      retries: 10
+    networks:
+      - my-network
+
+  af:
+    container_name: airflow_container
+    image: apache/airflow:3.1.0
+    ports:
+      - "8000:8080"
+    environment:
+      # ✅ usa el esquema correcto en AMBAS secciones
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@db:5432/airflow_db
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@db:5432/airflow_db
+
+      AIRFLOW__WEBSERVER__AUTHENTICATE: "False"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+
+      # Conexiones por ENV
+      AIRFLOW_CONN_POSTGRES_DEFAULT: "postgresql+psycopg2://db_user:db_password@db:5432/db"
+      AIRFLOW_CONN_COINGECKO: "https://api.coingecko.com?extra__headers__x-cg-demo-api-key=CG-ec5vyXgT4pDKCLBQ1GPGFseb"
+
+      # Rutas / network para DockerOperator + DBT
+      HOST_PROJECT_PATH: ${PWD}
+      AIRFLOW_DOCKER_NETWORK: "coingecko-project"
+
+      # CoinGecko (fallback si no usa conexión HTTP)
+      COINGECKO_API_BASE: "https://api.coingecko.com"
+      COINGECKO_API_KEY: "CG-ec5vyXgT4pDKCLBQ1GPGFseb"
+      COINGECKO_COIN_IDS: '["ethereum","bitcoin"]'
+
+      # Credenciales DB para scripts Python (si los usas fuera de hooks)
+      DB_HOST: "db"
+      DB_PORT: "5432"
+      DB_NAME: "db"
+      DB_USER: "db_user"
+      DB_PASSWORD: "db_password"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./api-request:/opt/airflow/api-request
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./dbt:/opt/airflow/dbt
+    group_add:
+      - '1001'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - my-network
+    command: >
+      bash -lc "pip install --no-cache-dir apache-airflow-providers-http apache-airflow-providers-postgres apache-airflow-providers-docker requests psycopg2-binary
+      && airflow db migrate
+      && airflow standalone"
+
+  dbt:
+    container_name: dbt_container
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
+    volumes:
+      - ./dbt/my_project:/usr/app
+      - ./dbt/profiles.yml:/root/.dbt/profiles.yml
+    working_dir: /usr/app
+    environment:
+      DBT_PROFILES_DIR: "/root/.dbt"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - my-network
+    command: run
+
+  superset-init:
+    image: apache/superset:3.0.0-py310
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    env_file:
+      - path: docker/.env
+        required: true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    user: *superset-user
+    volumes: *superset-volumes
+    environment:
+      SUPERSET_LOAD_EXAMPLES: "no"
+      SUPERSET_LOG_LEVEL: "${SUPERSET_LOG_LEVEL:-info}"
+      DATABASE_DB: "superset_db"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db_user -d db"]
+      interval: 5s
+      retries: 10
+    networks:
+      - my-network
+
+  superset:
+    env_file:
+      - path: docker/.env
+        required: true
+    image: apache/superset:3.0.0-py310
+    container_name: superset_app
+    command: ["/app/docker/docker-bootstrap.sh", "app"]
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    user: *superset-user
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    volumes: *superset-volumes
+    environment:
+      SUPERSET_LOG_LEVEL: "${SUPERSET_LOG_LEVEL:-info}"
+      DATABASE_DB: "superset_db"
+    networks:
+      - my-network
+
+  redis:
+    image: redis:7
+    container_name: superset_cache
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis:/data
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    name: coingecko-project
+    driver: bridge
+
+volumes:
+  redis:
+  postgres_data:
