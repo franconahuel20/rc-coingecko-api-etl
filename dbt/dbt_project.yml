@@ -1,0 +1,19 @@
+name: 'my_project'
+version: '1.0'
+config-version: 2
+
+profile: 'my_project'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+seed-paths: ["seeds"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_modules"
+
+require-dbt-version: [">=1.9.0", "<2.0.0"]

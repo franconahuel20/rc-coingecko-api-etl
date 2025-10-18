@@ -1,0 +1,52 @@
+version: 2
+
+sources:
+  - name: crypto
+    database: db                # o el nombre real de tu DB si cambiaste el contenedor
+    schema: public              # o el schema que usas en Postgres (dev/public)
+    description: "Raw crypto data ingested daily from the CoinGecko API"
+
+    tables:
+      - name: coin_daily_prices
+        description: "Daily cryptocurrency prices with full CoinGecko JSON payload"
+        columns:
+          - name: coin_id
+            description: "Unique identifier of the cryptocurrency (e.g. ethereum, bitcoin)"
+            tests:
+              - not_null
+
+          - name: at_date
+            description: "Date (YYYY-MM-DD) of the price record"
+            tests:
+              - not_null
+
+          - name: price_usd
+            description: "Closing price in USD for that day"
+            tests:
+              - not_null
+
+          - name: payload
+            description: "Full JSON response from CoinGecko API (includes market_data, community_data, developer_data, etc.)"
+
+      - name: coin_monthly_agg
+        description: "Monthly aggregated metrics (max, min) derived from coin_daily_prices"
+        columns:
+          - name: coin_id
+            description: "Cryptocurrency ID"
+            tests:
+              - not_null
+
+          - name: year_month
+            description: "First day of month representing aggregation period (YYYY-MM-01)"
+            tests:
+              - not_null
+
+          - name: max_price
+            description: "Maximum daily price during that month in USD"
+            tests:
+              - not_null
+
+          - name: min_price
+            description: "Minimum daily price during that month in USD"
+            tests:
+              - not_null
